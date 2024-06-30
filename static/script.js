@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadSection = document.getElementById('download-section');
     const downloadButton = document.getElementById('download-json');
     const spinner = document.getElementById('spinner');
+    const bookmarkCounter = document.getElementById('bookmark-counter');
 
     let processedBookmarks = null;
 
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = fileInput.files[0];
         if (file) {
             spinner.style.display = 'block';
+            bookmarkCounter.style.display = 'block';
             organizeButton.disabled = true;
             downloadSection.style.display = 'none';
 
@@ -37,12 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 processedBookmarks = data;
                 spinner.style.display = 'none';
+                bookmarkCounter.textContent = `Processed ${data.length} bookmarks`;
                 downloadSection.style.display = 'block';
                 console.log('Organized bookmarks:', data);
             })
             .catch((error) => {
                 console.error('Error:', error);
                 spinner.style.display = 'none';
+                bookmarkCounter.style.display = 'none';
                 organizeButton.disabled = false;
                 alert('An error occurred while processing the bookmarks. Please try again.');
             });
