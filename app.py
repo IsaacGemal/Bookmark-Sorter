@@ -39,22 +39,15 @@ def process_and_organize():
 
 def parse_bookmarks(file):
     content = file.read().decode('utf-8')
-    bookmark_pattern = re.compile(r'<DT><A HREF="(.*?)" ADD_DATE="(\d+)"[^>]*>(.*?)</A>|"url": ?"(.*?)",\s*"add_date": ?"(.*?)",\s*"title": ?"(.*?)"', re.DOTALL)
+    bookmark_pattern = re.compile(r'<DT><A HREF="(.*?)" ADD_DATE="(\d+)"[^>]*>(.*?)</A>', re.DOTALL)
     
     bookmarks = []
     for match in bookmark_pattern.finditer(content):
-        if match.group(1):  # HTML format
-            bookmark = {
-                "url": match.group(1),
-                "add_date": match.group(2),
-                "title": match.group(3)
-            }
-        else:  # JSON format
-            bookmark = {
-                "url": match.group(4),
-                "add_date": match.group(5),
-                "title": match.group(6)
-            }
+        bookmark = {
+            "url": match.group(1),
+            "add_date": match.group(2),
+            "title": match.group(3)
+        }
         bookmarks.append(bookmark)
     return bookmarks
 
