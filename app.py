@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import re
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -33,9 +33,20 @@ def process_and_organize():
         logging.info(f'Processing file: {file.filename}')
         bookmarks = parse_bookmarks(file)
         logging.info(f'Parsed {len(bookmarks)} bookmarks')
-        organized_bookmarks = organize_bookmarks_in_chunks(bookmarks)
-        logging.info(f'Organized {len(organized_bookmarks)} bookmarks')
-        return jsonify(organized_bookmarks)
+        
+        def generate():
+            organized_bookmarks = []
+            total_chunks = (len(bookmarks) + 24) // 25  # Calculate total number of chunks
+            for i, chunk in enumerate(chunk_bookmarks(bookmarks, 25)):
+                logging.info(f'Processing chunk {i + 1} with {len(chunk)} bookmarks')
+                organized_chunk = organize_bookmarks(chunk)
+                organized_bookmarks.extend(organized_chunk)
+                progress = (i + 1) / total_chunks
+                yield f"data: {json.dumps({'progress': progress, 'chunk': i + 1, 'total': total_chunks})}\n\n"
+            
+            yield f"data: {json.dumps({'organized_bookmarks': organized_bookmarks})}\n\n"
+        
+        return Response(generate(), content_type='text/event-stream')
 
 def parse_bookmarks(file):
     content = file.read().decode('utf-8')
@@ -51,14 +62,9 @@ def parse_bookmarks(file):
         bookmarks.append(bookmark)
     return bookmarks
 
-def organize_bookmarks_in_chunks(bookmarks, chunk_size=25):
-    organized_bookmarks = []
+def chunk_bookmarks(bookmarks, chunk_size=25):
     for i in range(0, len(bookmarks), chunk_size):
-        chunk = bookmarks[i:i + chunk_size]
-        logging.info(f'Processing chunk {i // chunk_size + 1} with {len(chunk)} bookmarks')
-        organized_chunk = organize_bookmarks(chunk)
-        organized_bookmarks.extend(organized_chunk)
-    return organized_bookmarks
+        yield bookmarks[i:i + chunk_size]
 
 def organize_bookmarks(bookmarks):
     logging.info(f'Sending {len(bookmarks)} bookmarks to Anthropic API for organization')

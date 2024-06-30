@@ -23,29 +23,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = fileInput.files[0];
         if (file) {
             spinner.style.display = 'block';
+            spinner.textContent = 'Processing...';
             organizeButton.disabled = true;
             downloadSection.style.display = 'none';
 
             const formData = new FormData();
             formData.append('file', file);
 
-            fetch('/process_and_organize', {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                processedBookmarks = data;
-                spinner.style.display = 'none';
-                downloadSection.style.display = 'block';
-                console.log('Organized bookmarks:', data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
+            const eventSource = new EventSource('/process_and_organize');
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.progress) {
+                    const progressPercentage = (data.progress * 100).toFixed(2);
+                    spinner.textContent = `Processing... ${progressPercentage}% (Chunk ${data.chunk}/${data.total})`;
+                    console.log(`Processing progress: ${progressPercentage}%`);
+                } else if (data.organized_bookmarks) {
+                    processedBookmarks = data.organized_bookmarks;
+                    spinner.style.display = 'none';
+                    downloadSection.style.display = 'block';
+                    console.log('Organized bookmarks:', processedBookmarks);
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
                 spinner.style.display = 'none';
                 organizeButton.disabled = false;
                 alert('An error occurred while processing the bookmarks. Please try again.');
-            });
+                eventSource.close();
+            };
         }
     });
 
