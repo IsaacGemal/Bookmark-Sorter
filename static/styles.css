@@ -89,13 +89,23 @@ footer {
     margin-top: 20px;
 }
 
-.github-link {
+.social-link {
     color: #333;
     text-decoration: none;
     font-size: 1.2em;
     transition: color 0.3s;
+    margin: 0 10px;
+    display: inline-block;
+}
+
+.social-link:hover {
+    color: #4CAF50;
 }
 
 .github-link:hover {
     color: #4CAF50;
+}
+
+.twitter-link:hover {
+    color: #1DA1F2;
 }
