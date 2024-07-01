@@ -2,9 +2,11 @@ import os
 import json
 import logging
 import re
-from flask import Flask, render_template, request, jsonify
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_socketio import SocketIO, emit
 from anthropic import Anthropic
+from io import BytesIO
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -40,6 +42,20 @@ def process_and_organize():
         organized_bookmarks = organize_bookmarks_in_chunks(bookmarks)
         logging.info(f'Organized {len(organized_bookmarks)} bookmarks')
         return jsonify(organized_bookmarks)
+
+@app.route('/convert_to_html', methods=['POST'])
+def convert_to_html():
+    json_data = request.json
+    html_content = json_to_html_bookmarks(json_data)
+    
+    # Create a BytesIO object to hold the HTML content
+    html_buffer = BytesIO(html_content.encode())
+    
+    # Send the file
+    return send_file(html_buffer,
+                     mimetype='text/html',
+                     as_attachment=True,
+                     download_name='organized_bookmarks.html')
 
 def parse_bookmarks(file):
     content = file.read().decode('utf-8')
@@ -107,6 +123,46 @@ Please organize these bookmarks into categories. For each bookmark, assign a cat
     except Exception as e:
         logging.error(f'Error organizing bookmarks: {str(e)}')
         raise
+
+def json_to_html_bookmarks(json_data):
+    # Parse JSON data
+    bookmarks = json_data  # The data is already parsed in Flask
+
+    # Create a dictionary to group bookmarks by category
+    categories = {}
+    for bookmark in bookmarks:
+        category = bookmark.get('category', 'Uncategorized')
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(bookmark)
+
+    # Generate HTML content
+    html_content = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="{current_timestamp}" LAST_MODIFIED="{current_timestamp}" PERSONAL_TOOLBAR_FOLDER="true">Favorites bar</H3>
+    <DL><p>
+""".format(current_timestamp=int(datetime.now().timestamp()))
+
+    # Add bookmarks grouped by category
+    for category, bookmarks in categories.items():
+        html_content += f'        <DT><H3 ADD_DATE="{int(datetime.now().timestamp())}">{category}</H3>\n'
+        html_content += '        <DL><p>\n'
+        for bookmark in bookmarks:
+            html_content += f'            <DT><A HREF="{bookmark["url"]}" ADD_DATE="{bookmark["add_date"]}">{bookmark["title"]}</A>\n'
+        html_content += '        </DL><p>\n'
+
+    # Close the HTML structure
+    html_content += """    </DL><p>
+</DL><p>
+"""
+
+    return html_content
 
 if __name__ == '__main__':
     app.run(debug=True)

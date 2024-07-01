@@ -83,14 +83,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     downloadButton.addEventListener('click', () => {
+        console.log('Download button clicked');
         if (processedBookmarks) {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(processedBookmarks, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "organized_bookmarks.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            console.log('Processed bookmarks found, converting to HTML');
+            fetch('/convert_to_html', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(processedBookmarks),
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'organized_bookmarks.html';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch((error) => {
+                console.error('Error during download:', error);
+                alert('An error occurred while preparing the download. Please try again.');
+            });
+        } else {
+            console.log('No processed bookmarks found');
+            alert('No bookmarks to download. Please organize your bookmarks first.');
         }
     });
 });
