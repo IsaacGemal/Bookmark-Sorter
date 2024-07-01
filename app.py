@@ -3,11 +3,11 @@ import json
 import logging
 import re
 from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
 from anthropic import Anthropic
-from bs4 import BeautifulSoup
-from datetime import datetime
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 
 # Set up logging
 logging.basicConfig(filename='bookmark_organizer.log', level=logging.INFO,
@@ -19,6 +19,10 @@ client = Anthropic(api_key=anthropic_key)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@socketio.on('connect')
+def handle_connect():
+    emit('after_connect', {'data': 'Connected to bookmark processing'})
 
 @app.route('/process_and_organize', methods=['POST'])
 def process_and_organize():
@@ -53,11 +57,14 @@ def parse_bookmarks(file):
 
 def organize_bookmarks_in_chunks(bookmarks, chunk_size=25):
     organized_bookmarks = []
+    total_processed = 0
     for i in range(0, len(bookmarks), chunk_size):
         chunk = bookmarks[i:i + chunk_size]
         logging.info(f'Processing chunk {i // chunk_size + 1} with {len(chunk)} bookmarks')
         organized_chunk = organize_bookmarks(chunk)
         organized_bookmarks.extend(organized_chunk)
+        total_processed += len(organized_chunk)
+        socketio.emit('bookmark_update', {'count': total_processed, 'bookmarks': organized_chunk})
     return organized_bookmarks
 
 def organize_bookmarks(bookmarks):
