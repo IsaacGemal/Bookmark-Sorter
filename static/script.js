@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bookmarkCounter.style.display = 'none';
 
             spinner.style.display = 'block';
+            spinner.textContent = 'Processing...'; // Add text to the spinner
             organizeButton.disabled = true;
             downloadSection.style.display = 'none';
             processedBookmarksContainer.style.display = 'none';
@@ -66,12 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 processedBookmarks = data;
                 spinner.style.display = 'none';
+                spinner.textContent = ''; // Clear the spinner text
                 downloadSection.style.display = 'block';
                 console.log('Organized bookmarks:', data);
             })
             .catch((error) => {
                 console.error('Error:', error);
                 spinner.style.display = 'none';
+                spinner.textContent = ''; // Clear the spinner text
                 bookmarkCounter.style.display = 'none';
                 organizeButton.disabled = false;
                 alert('An error occurred while processing the bookmarks. Please try again.');
