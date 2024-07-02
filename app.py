@@ -116,6 +116,8 @@ Please organize these bookmarks into categories. For each bookmark, assign a cat
     ...
 ]
 """
+    # Log the JSON content being sent to Anthropic
+    logging.info(f'JSON content sent to Anthropic API:\n{json.dumps(bookmarks_for_api, indent=2)}')
     
     try:
         response = client.messages.create(
