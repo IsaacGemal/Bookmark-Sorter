@@ -29,7 +29,7 @@ def handle_connect():
 @app.route('/process_and_organize', methods=['POST'])
 def process_and_organize():
     if 'file' not in request.files:
-        logging.error('No file part in the request')
+        logging.error('No file part in the rePquest')
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
     if file.filename == '':
@@ -60,13 +60,23 @@ def convert_to_html():
 def parse_bookmarks(file):
     content = file.read().decode('utf-8')
     bookmark_pattern = re.compile(r'<DT><A HREF="(.*?)" ADD_DATE="(\d+)"[^>]*>(.*?)</A>', re.DOTALL)
+    icon_pattern = re.compile(r'ICON="data:image/\w+;base64,(.*?)"')
     
     bookmarks = []
     for match in bookmark_pattern.finditer(content):
+        url = match.group(1)
+        add_date = match.group(2)
+        title = match.group(3)
+        
+        # Find the icon data for this bookmark
+        icon_match = icon_pattern.search(content, match.start(), match.end())
+        icon_data = icon_match.group(1) if icon_match else None
+        
         bookmark = {
-            "url": match.group(1),
-            "add_date": match.group(2),
-            "title": match.group(3)
+            "url": url,
+            "add_date": add_date,
+            "title": title,
+            "icon_data": icon_data
         }
         bookmarks.append(bookmark)
     return bookmarks
@@ -85,9 +95,13 @@ def organize_bookmarks_in_chunks(bookmarks, chunk_size=25):
 
 def organize_bookmarks(bookmarks):
     logging.info(f'Sending {len(bookmarks)} bookmarks to Anthropic API for organization')
+    
+    # Create a version of bookmarks without icon_data for the API request
+    bookmarks_for_api = [{k: v for k, v in bookmark.items() if k != 'icon_data'} for bookmark in bookmarks]
+    
     message = f"""Here is a list of bookmarks:
 
-{json.dumps(bookmarks, indent=2)}
+{json.dumps(bookmarks_for_api, indent=2)}
 
 Please organize these bookmarks into categories. For each bookmark, assign a category and provide a brief description. Return the result as a JSON string with the following structure:
 
@@ -118,6 +132,11 @@ Please organize these bookmarks into categories. For each bookmark, assign a cat
         json_response = ai_response[start_index:end_index]
         
         organized_bookmarks = json.loads(json_response)
+        
+        # Add back the icon_data to the organized bookmarks
+        for org_bookmark, orig_bookmark in zip(organized_bookmarks, bookmarks):
+            org_bookmark['icon_data'] = orig_bookmark['icon_data']
+        
         logging.info(f'Successfully organized {len(organized_bookmarks)} bookmarks')
         return organized_bookmarks
     except Exception as e:
@@ -154,7 +173,8 @@ def json_to_html_bookmarks(json_data):
         html_content += f'        <DT><H3 ADD_DATE="{int(datetime.now().timestamp())}">{category}</H3>\n'
         html_content += '        <DL><p>\n'
         for bookmark in bookmarks:
-            html_content += f'            <DT><A HREF="{bookmark["url"]}" ADD_DATE="{bookmark["add_date"]}">{bookmark["title"]}</A>\n'
+            icon_attr = f' ICON="data:image/png;base64,{bookmark["icon_data"]}"' if bookmark.get("icon_data") else ''
+            html_content += f'            <DT><A HREF="{bookmark["url"]}" ADD_DATE="{bookmark["add_date"]}"{icon_attr}>{bookmark["title"]}</A>\n'
         html_content += '        </DL><p>\n'
 
     # Close the HTML structure
