@@ -6,6 +6,7 @@
     <title>Bookmark Organizer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -23,6 +24,10 @@
         <div id="processed-bookmarks-container" style="display:none;">
             <h2>Processed Bookmarks</h2>
             <ul id="processed-bookmarks-list"></ul>
+        </div>
+        <div id="visualization-container" style="display:none;">
+            <h2>Bookmark Visualization</h2>
+            <div id="plotly-chart"></div>
         </div>
         <div id="download-section" style="display:none;">
             <button id="download-json">Download Organized Bookmarks</button>        

@@ -8,6 +8,15 @@ from flask_socketio import SocketIO, emit
 from anthropic import Anthropic
 from io import BytesIO
 
+# Updated imports
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+from sklearn.manifold import TSNE
+from urllib.parse import urlparse
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 app = Flask(__name__)
 socketio = SocketIO(app)
 
@@ -29,7 +38,7 @@ def handle_connect():
 @app.route('/process_and_organize', methods=['POST'])
 def process_and_organize():
     if 'file' not in request.files:
-        logging.error('No file part in the rePquest')
+        logging.error('No file part in the request')
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
     if file.filename == '':
@@ -41,7 +50,11 @@ def process_and_organize():
         logging.info(f'Parsed {len(bookmarks)} bookmarks')
         organized_bookmarks = organize_bookmarks_in_chunks(bookmarks)
         logging.info(f'Organized {len(organized_bookmarks)} bookmarks')
-        return jsonify(organized_bookmarks)
+        
+        # Generate embeddings and create plot data
+        plot_data = visualize_bookmarks(organized_bookmarks)
+        
+        return jsonify({'bookmarks': organized_bookmarks, 'plot_data': plot_data})
 
 @app.route('/convert_to_html', methods=['POST'])
 def convert_to_html():
@@ -185,6 +198,95 @@ def json_to_html_bookmarks(json_data):
 """
 
     return html_content
+
+def generate_embeddings(texts):
+    # model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")  # Small model for testing
+    model = SentenceTransformer("Salesforce/SFR-Embedding-Mistral")  # Big production model, save commented for later
+    model = model.to('cuda')  # Move model to GPU
+    embeddings = model.encode(texts, normalize_embeddings=True)
+    return embeddings
+
+def create_vector_db(embeddings):
+    dimension = embeddings.shape[1]
+    index = faiss.IndexFlatIP(dimension)  # Use Inner Product for cosine similarity
+    index.add(embeddings)
+    return index
+
+def get_domain(url):
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc
+    parts = domain.split('.')
+    if len(parts) > 2:
+        return '.'.join(parts[-2:])
+    return domain
+
+def visualize_embeddings_plotly(embeddings, labels, descriptions, urls):
+    n_samples = len(embeddings)
+    if n_samples < 5:
+        logging.warning("Not enough samples to perform t-SNE. Skipping visualization.")
+        return None
+
+    perplexity = min(30, n_samples - 1)  # Adjust perplexity based on number of samples
+    tsne = TSNE(n_components=2, random_state=0, perplexity=perplexity)
+    
+    try:
+        reduced_embeddings = tsne.fit_transform(embeddings)
+        
+        # Create a color map for unique domains
+        unique_domains = list(set(labels))
+        color_map = {domain: f'rgb({hash(domain) % 256}, {(hash(domain) * 2) % 256}, {(hash(domain) * 3) % 256})' for domain in unique_domains}
+        
+        traces = []
+        
+        for domain in unique_domains:
+            domain_indices = [i for i, label in enumerate(labels) if label == domain]
+            traces.append(
+                {
+                    'x': reduced_embeddings[domain_indices, 0].tolist(),
+                    'y': reduced_embeddings[domain_indices, 1].tolist(),
+                    'mode': 'markers',
+                    'name': domain,
+                    'marker': {
+                        'color': color_map[domain],
+                        'size': 10,
+                        'line': {'width': 1, 'color': 'DarkSlateGrey'}
+                    },
+                    'text': [f"Domain: {labels[i]}<br>Description: {descriptions[i]}<br>URL: {urls[i]}" for i in domain_indices],
+                    'hoverinfo': 'text'
+                }
+            )
+        
+        return {
+            'data': traces,
+            'layout': {
+                'title': "Interactive t-SNE visualization of bookmark embeddings",
+                'xaxis': {'title': "t-SNE feature 1"},
+                'yaxis': {'title': "t-SNE feature 2"},
+                'hovermode': 'closest'
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error during t-SNE visualization: {str(e)}")
+        return None
+
+def visualize_bookmarks(bookmarks):
+    if not bookmarks:
+        logging.warning("No bookmarks to visualize.")
+        return None
+
+    descriptions = [item['description'] for item in bookmarks]
+    urls = [item['url'] for item in bookmarks]
+    
+    try:
+        embeddings = generate_embeddings(descriptions)
+        labels = [get_domain(url) for url in urls]
+        
+        vector_db = create_vector_db(embeddings)
+        plot_data = visualize_embeddings_plotly(embeddings, labels, descriptions, urls)
+        return plot_data
+    except Exception as e:
+        logging.error(f"Error during bookmark visualization: {str(e)}")
+        return None
 
 if __name__ == '__main__':
     app.run(debug=True)

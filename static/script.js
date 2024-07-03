@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookmarkCounter = document.getElementById('bookmark-counter');
     const processedBookmarksContainer = document.getElementById('processed-bookmarks-container');
     const processedBookmarksList = document.getElementById('processed-bookmarks-list');
+    const visualizationContainer = document.getElementById('visualization-container');
+    const plotlyChart = document.getElementById('plotly-chart');
 
     let processedBookmarks = null;
     
@@ -55,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadSection.style.display = 'none';
             processedBookmarksContainer.style.display = 'none';
             processedBookmarksList.innerHTML = '';
+            visualizationContainer.style.display = 'none';
 
             const formData = new FormData();
             formData.append('file', file);
@@ -65,11 +68,17 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(response => response.json())
             .then(data => {
-                processedBookmarks = data;
+                processedBookmarks = data.bookmarks;
                 spinner.style.display = 'none';
                 spinner.textContent = ''; // Clear the spinner text
                 downloadSection.style.display = 'block';
-                console.log('Organized bookmarks:', data);
+                console.log('Organized bookmarks:', data.bookmarks);
+
+                // Display the Plotly chart
+                if (data.plot_data) {
+                    visualizationContainer.style.display = 'block';
+                    Plotly.newPlot('plotly-chart', data.plot_data.data, data.plot_data.layout);
+                }
             })
             .catch((error) => {
                 console.error('Error:', error);
