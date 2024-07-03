@@ -1,0 +1,7 @@
+anthropic
+flask
+flask-socketio
+sentence-transformers
+faiss-cpu
+scikit-learn
+numpy
