@@ -10,6 +10,9 @@ Bookmark Organizer is a web application that helps you organize and visualize yo
 - Real-time processing updates via WebSocket
 - Download organized bookmarks as an HTML file compatible with most browsers
 
+![chrome_L1xHAL9wnS](https://github.com/IsaacGemal/Bookmark-Sorter/assets/147355120/4a65b0be-7846-4014-85a3-cfc7bf087fac)
+![image](https://github.com/IsaacGemal/Bookmark-Sorter/assets/147355120/1c2924a0-0f08-4849-976b-95a3486b4bb4)
+
 ## Tech Stack
 
 - Backend: Flask, Flask-SocketIO
