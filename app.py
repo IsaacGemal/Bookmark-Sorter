@@ -200,8 +200,8 @@ def json_to_html_bookmarks(json_data):
     return html_content
 
 def generate_embeddings(texts):
-    # model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")  # Small model for testing
-    model = SentenceTransformer("Salesforce/SFR-Embedding-Mistral")  # Big production model, save commented for later
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")  # Small model for testing
+    # model = SentenceTransformer("Salesforce/SFR-Embedding-Mistral")  # Big production model, save commented for later
     model = model.to('cuda')  # Move model to GPU
     embeddings = model.encode(texts, normalize_embeddings=True)
     return embeddings
