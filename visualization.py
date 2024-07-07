@@ -5,10 +5,18 @@ import faiss
 import numpy as np
 from sklearn.manifold import TSNE
 
+model = None
+
+def load_model():
+    global model
+    if model is None:
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")  # Small model for testing
+        # model = SentenceTransformer("Salesforce/SFR-Embedding-Mistral")  # Big production model, commented for later
+        model = model.to('cuda')  # Move model to GPU
+    return model
+
 def generate_embeddings(texts):
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")  # Small model for testing
-    # model = SentenceTransformer("Salesforce/SFR-Embedding-Mistral")  # Big production model, commented for later
-    model = model.to('cuda')  # Move model to GPU
+    model = load_model()
     embeddings = model.encode(texts, normalize_embeddings=True)
     return embeddings
 

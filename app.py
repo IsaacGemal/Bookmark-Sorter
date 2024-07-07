@@ -6,7 +6,7 @@ from io import BytesIO
 import os
 
 from bookmarks import parse_bookmarks, organize_bookmarks_in_chunks, json_to_html_bookmarks
-from visualization import visualize_bookmarks
+from visualization import visualize_bookmarks, load_model
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -17,6 +17,9 @@ logging.basicConfig(filename='bookmark_organizer.log', level=logging.INFO,
 
 anthropic_key = os.getenv('ANTHROPIC_API_KEY')
 client = Anthropic(api_key=anthropic_key)
+
+# Load the model when the app starts
+load_model()
 
 @app.route('/')
 def index():
