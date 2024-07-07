@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const processedBookmarksList = document.getElementById('processed-bookmarks-list');
     const visualizationContainer = document.getElementById('visualization-container');
     const plotlyChart = document.getElementById('plotly-chart');
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
 
     let processedBookmarks = null;
     
@@ -25,11 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookmarkCounter.textContent = `Processed ${data.count} bookmarks`;
         if (data.bookmarks) {
             processedBookmarksContainer.style.display = 'block';
-            data.bookmarks.forEach(bookmark => {
-                const li = document.createElement('li');
-                li.innerHTML = `<strong>${bookmark.title}</strong> (${bookmark.category}): ${bookmark.description}`;
-                processedBookmarksList.appendChild(li);
-            });
+            displayBookmarks(data.bookmarks);
         }
     });
 
@@ -72,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 spinner.style.display = 'none';
                 spinner.textContent = ''; // Clear the spinner text
                 downloadSection.style.display = 'block';
-                console.log('Organized bookmarks:', data.bookmarks);
+                processedBookmarksContainer.style.display = 'block';
+                displayBookmarks(processedBookmarks);
 
                 // Display the Plotly chart
                 if (data.plot_data) {
@@ -92,9 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     downloadButton.addEventListener('click', () => {
-        console.log('Download button clicked');
         if (processedBookmarks) {
-            console.log('Processed bookmarks found, converting to HTML');
             fetch('/convert_to_html', {
                 method: 'POST',
                 headers: {
@@ -118,8 +115,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('An error occurred while preparing the download. Please try again.');
             });
         } else {
-            console.log('No processed bookmarks found');
             alert('No bookmarks to download. Please organize your bookmarks first.');
+        }
+    });
+
+    // Function to display bookmarks
+    function displayBookmarks(bookmarks) {
+        processedBookmarksList.innerHTML = '';
+        bookmarks.forEach(bookmark => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${bookmark.title}</strong> (${bookmark.category}): ${bookmark.description}`;
+            processedBookmarksList.appendChild(li);
+        });
+    }
+
+    // Function to filter bookmarks
+    function filterBookmarks(searchTerm) {
+        if (!processedBookmarks) return;
+
+        const filteredBookmarks = processedBookmarks.filter(bookmark => 
+            bookmark.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            bookmark.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            bookmark.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        displayBookmarks(filteredBookmarks);
+    }
+
+    // Search button click event
+    searchButton.addEventListener('click', () => {
+        const searchTerm = searchInput.value.trim();
+        filterBookmarks(searchTerm);
+    });
+
+    // Search input 'Enter' key press event
+    searchInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            const searchTerm = searchInput.value.trim();
+            filterBookmarks(searchTerm);
         }
     });
 });
